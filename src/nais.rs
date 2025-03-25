@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::env_var::EnvVar;
+
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NaisConfig {
     pub apiVersion: String,
@@ -17,6 +20,7 @@ pub struct Metadata {
     pub namespace: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Spec {
     #[serde(default)]
@@ -24,7 +28,7 @@ pub struct Spec {
     #[serde(default)]
     pub azure: Option<Azure>,
     #[serde(default)]
-    pub env: Option<Vec<EnvVar>>,
+    pub env: Option<Vec<NaisEnvVar>>,
     #[serde(default)]
     pub envFrom: Option<Vec<EnvFrom>>,
     #[serde(default)]
@@ -34,8 +38,6 @@ pub struct Spec {
     pub image: String,
     #[serde(default)]
     pub ingresses: Option<Vec<String>>,
-    #[serde(default)]
-    pub login: Option<Login>,
     #[serde(default)]
     pub maskinporten: Option<Maskinporten>,
     #[serde(default)]
@@ -106,6 +108,7 @@ pub struct Azure {
     pub sidecar: Option<AzureSidecar>,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AzureApplication {
     #[serde(default)]
@@ -129,6 +132,7 @@ pub struct AzureGroup {
     pub id: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AzureSidecar {
     #[serde(default)]
@@ -137,12 +141,11 @@ pub struct AzureSidecar {
     pub autoLoginIgnorePaths: Option<Vec<String>>,
     #[serde(default)]
     pub enabled: Option<bool>,
-    #[serde(default)]
-    pub resources: Option<Resources>,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
-pub struct EnvVar {
+pub struct NaisEnvVar {
     pub name: String,
     #[serde(default)]
     pub value: Option<String>,
@@ -150,12 +153,14 @@ pub struct EnvVar {
     pub valueFrom: Option<ValueFrom>,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ValueFrom {
     #[serde(default)]
     pub fieldRef: Option<FieldRef>,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FieldRef {
     pub fieldPath: String,
@@ -169,6 +174,7 @@ pub struct EnvFrom {
     pub secret: Option<String>,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FilesFrom {
     #[serde(default)]
@@ -189,119 +195,6 @@ pub struct EmptyDir {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Frontend {
-    #[serde(default)]
-    pub generatedConfig: Option<GeneratedConfig>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GeneratedConfig {
-    pub mountPath: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LifecycleCondition {
-    #[serde(default)]
-    pub age: Option<u32>,
-    #[serde(default)]
-    pub createdBefore: Option<String>,
-    #[serde(default)]
-    pub numNewerVersions: Option<u32>,
-    #[serde(default)]
-    pub withState: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GcpPermission {
-    pub resource: GcpResource,
-    pub role: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GcpResource {
-    pub apiVersion: String,
-    pub kind: String,
-    pub name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SqlInstance {
-    #[serde(default)]
-    pub autoBackupHour: Option<u32>,
-    #[serde(default)]
-    pub cascadingDelete: Option<bool>,
-    #[serde(default)]
-    pub collation: Option<String>,
-    #[serde(default)]
-    pub databases: Option<Vec<SqlDatabase>>,
-    #[serde(default)]
-    pub diskAutoresize: Option<bool>,
-    #[serde(default)]
-    pub diskAutoresizeLimit: Option<u32>,
-    #[serde(default)]
-    pub diskSize: Option<u32>,
-    #[serde(default)]
-    pub diskType: Option<String>,
-    #[serde(default)]
-    pub flags: Option<Vec<SqlFlag>>,
-    #[serde(default)]
-    pub highAvailability: Option<bool>,
-    #[serde(default)]
-    pub insights: Option<SqlInsights>,
-    #[serde(default)]
-    pub maintenance: Option<SqlMaintenance>,
-    pub name: String,
-    #[serde(default)]
-    pub pointInTimeRecovery: Option<bool>,
-    #[serde(default)]
-    pub retainedBackups: Option<u32>,
-    #[serde(default)]
-    pub tier: Option<String>,
-    #[serde(default)]
-    pub transactionLogRetentionDays: Option<u32>,
-    #[serde(default)]
-    pub r#type: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SqlDatabase {
-    #[serde(default)]
-    pub envVarPrefix: Option<String>,
-    pub name: String,
-    #[serde(default)]
-    pub users: Option<Vec<SqlUser>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SqlUser {
-    pub name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SqlFlag {
-    pub name: String,
-    pub value: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SqlInsights {
-    #[serde(default)]
-    pub enabled: Option<bool>,
-    #[serde(default)]
-    pub queryStringLength: Option<u32>,
-    #[serde(default)]
-    pub recordApplicationTags: Option<bool>,
-    #[serde(default)]
-    pub recordClientAddress: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SqlMaintenance {
-    pub day: u32,
-    pub hour: u32,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct Idporten {
     #[serde(default)]
     pub enabled: Option<bool>,
@@ -309,6 +202,7 @@ pub struct Idporten {
     pub sidecar: Option<IdportenSidecar>,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IdportenSidecar {
     #[serde(default)]
@@ -321,51 +215,6 @@ pub struct IdportenSidecar {
     pub level: Option<String>,
     #[serde(default)]
     pub locale: Option<String>,
-    #[serde(default)]
-    pub resources: Option<Resources>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Influx {
-    pub instance: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Kafka {
-    pub pool: String,
-    #[serde(default)]
-    pub streams: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Probe {
-    #[serde(default)]
-    pub failureThreshold: Option<u32>,
-    #[serde(default)]
-    pub initialDelay: Option<u32>,
-    pub path: String,
-    #[serde(default)]
-    pub periodSeconds: Option<u32>,
-    #[serde(default)]
-    pub port: Option<u16>,
-    #[serde(default)]
-    pub timeout: Option<u32>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Login {
-    #[serde(default)]
-    pub enforce: Option<Enforce>,
-    #[serde(default)]
-    pub provider: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Enforce {
-    #[serde(default)]
-    pub enabled: Option<bool>,
-    #[serde(default)]
-    pub excludePaths: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -389,6 +238,7 @@ pub struct MaskinportenConsume {
     pub name: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MaskinportenExpose {
     #[serde(default)]
@@ -418,106 +268,72 @@ pub struct MaskinportenConsumer {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Observability {
-    #[serde(default)]
-    pub autoInstrumentation: Option<AutoInstrumentation>,
-    #[serde(default)]
-    pub logging: Option<Logging>,
-    #[serde(default)]
-    pub tracing: Option<Tracing>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AutoInstrumentation {
-    #[serde(default)]
-    pub destinations: Option<Vec<Destination>>,
-    #[serde(default)]
-    pub enabled: Option<bool>,
-    #[serde(default)]
-    pub runtime: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Destination {
-    pub id: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Logging {
-    #[serde(default)]
-    pub destinations: Option<Vec<Destination>>,
-    #[serde(default)]
-    pub enabled: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Tracing {
-    #[serde(default)]
-    pub enabled: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct OpenSearch {
-    pub access: String,
-    pub instance: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PreStopHook {
-    #[serde(default)]
-    pub exec: Option<Exec>,
-    #[serde(default)]
-    pub http: Option<Http>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Exec {
-    pub command: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Http {
-    pub path: String,
-    pub port: u16,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Prometheus {
-    #[serde(default)]
-    pub enabled: Option<bool>,
-    #[serde(default)]
-    pub path: Option<String>,
-    #[serde(default)]
-    pub port: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Redirect {
-    pub from: String,
-    pub to: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct Tokenx {
     #[serde(default)]
     pub enabled: Option<bool>,
 }
 
-pub fn load_config(config_path: &String) -> Result<NaisConfig, Box<dyn std::error::Error>> {
-    let content = match std::fs::read_to_string(&config_path) {
-        Ok(content) => content,
-        Err(e) => return Err(format!("Failed to read config file {}: {}", config_path, e).into()),
-    };
+pub struct NaisConfigLoader {
+    config: NaisConfig,
+}
 
-    // Check if kind is "Application" before parsing
-    if !content.contains("kind: \"Application\"") {
-        return Err("Expected kind: Application".into());
+impl NaisConfigLoader {
+    pub fn new(config_path: String) -> Result<Self, Box<dyn std::error::Error>> {
+        let content = match std::fs::read_to_string(&config_path) {
+            Ok(content) => content,
+            Err(e) => {
+                return Err(format!("Failed to read config file {}: {}", config_path, e).into());
+            }
+        };
+
+        // Check if kind is "Application" before parsing and panic if not
+        if !content.contains("kind: \"Application\"") {
+            panic!("Expected kind: Application");
+        }
+
+        let config: NaisConfig = match serde_yaml::from_str(&content) {
+            Ok(config) => config,
+            Err(e) => panic!("Failed to parse config as YAML: {}", e),
+        };
+
+        Ok(NaisConfigLoader { config })
     }
 
-    let config: NaisConfig = match serde_yaml::from_str(&content) {
-        Ok(config) => config,
-        Err(e) => return Err(format!("Failed to parse config as YAML: {}", e).into()),
-    };
+    pub fn get_namespace(&self) -> &str {
+        &self.config.metadata.namespace
+    }
 
-    Ok(config)
+    pub fn get_deployment(&self) -> &str {
+        &self.config.metadata.name
+    }
+
+    pub fn get_env_vars(&self) -> Vec<EnvVar> {
+        let mut env_vars = Vec::new();
+        if let Some(env) = &self.config.spec.env {
+            for e in env {
+                env_vars.push(EnvVar {
+                    name: e.name.clone(),
+                    value: e.value.clone().unwrap_or_default(),
+                });
+            }
+        }
+        env_vars
+    }
+
+    pub fn get_env_var_from_secret_keys(&self) -> Vec<String> {
+        let secret_keys = self
+            .config
+            .spec
+            .envFrom
+            .as_ref()
+            .map(|env_from| {
+                env_from
+                    .iter()
+                    .filter_map(|e| e.secret.as_ref().map(|secret| secret.clone()))
+                    .collect()
+            })
+            .expect("Could not get secrets from env");
+
+        secret_keys
+    }
 }
