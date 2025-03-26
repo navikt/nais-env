@@ -1,7 +1,4 @@
-use std::{
-    env,
-    process::{Command, Stdio},
-};
+use std::{env, process::Command};
 mod kubernetes_client;
 mod nais;
 
@@ -37,7 +34,6 @@ async fn main() -> std::io::Result<()> {
     }
 
     let secret_keys = nais_config.get_env_var_from_secret_keys();
-    println!("Secret keys to fetch: {:?}", secret_keys);
 
     let mut collected_secrets = Vec::new();
     for secret_name in secret_keys {
@@ -49,10 +45,6 @@ async fn main() -> std::io::Result<()> {
 
     for (key, value) in &collected_secrets {
         env_vars.insert(key.clone(), value.clone());
-    }
-
-    for (key, value) in &env_vars {
-        println!("VAR {} = VALUE {}", key, value);
     }
 
     let shell = if cfg!(target_os = "windows") {
