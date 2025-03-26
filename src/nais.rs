@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::env_var::EnvVar;
-
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NaisConfig {
@@ -307,14 +305,11 @@ impl NaisConfigLoader {
         &self.config.metadata.name
     }
 
-    pub fn get_env_vars(&self) -> Vec<EnvVar> {
-        let mut env_vars = Vec::new();
+    pub fn get_env_vars(&self) -> HashMap<String, String> {
+        let mut env_vars = HashMap::new();
         if let Some(env) = &self.config.spec.env {
             for e in env {
-                env_vars.push(EnvVar {
-                    name: e.name.clone(),
-                    value: e.value.clone().unwrap_or_default(),
-                });
+                env_vars.insert(e.name.clone(), e.value.clone().unwrap_or_default());
             }
         }
         env_vars

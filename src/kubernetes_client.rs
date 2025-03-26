@@ -1,8 +1,6 @@
 use k8s_openapi::api::{apps::v1::Deployment, core::v1::Secret};
 use kube::{Api, Client, Config};
-use std::str;
-
-use crate::env_var::EnvVar;
+use std::{collections::HashMap, str};
 
 pub struct KubernetesClient {
     client: Client,
@@ -35,27 +33,29 @@ impl KubernetesClient {
     pub async fn get_secret(
         &self,
         secret_name: &str,
-    ) -> Result<Vec<EnvVar>, Box<dyn std::error::Error>> {
+    ) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
         let secret: Secret = Api::default_namespaced(self.client.clone())
             .get(secret_name)
             .await?;
 
-        // Parse secret.data into Vector of EnvVar
-        let env_vars: Vec<EnvVar> = if let Some(data) = &secret.data {
+        // Parse secret.data into HashMap
+        let env_vars: HashMap<String, String> = if let Some(data) = &secret.data {
             data.iter()
-                .map(|(key, value)| EnvVar {
-                    name: key.clone(),
-                    value: String::from_utf8(value.0.clone()).unwrap_or_default(),
+                .map(|(key, value)| {
+                    (
+                        key.clone(),
+                        String::from_utf8(value.0.clone()).unwrap_or_default(),
+                    )
                 })
                 .collect()
         } else {
-            Vec::new()
+            HashMap::new()
         };
 
         Ok(env_vars)
     }
 
-    pub async fn get_secrets(&self) -> Result<Vec<EnvVar>, Box<dyn std::error::Error>> {
+    pub async fn get_secrets(&self) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
         let deployment = self.get_deployment(self.deployment.as_ref()).await?;
 
         let containers = match &deployment.spec {
@@ -73,7 +73,7 @@ impl KubernetesClient {
 
         let env_from = match &container.env_from {
             Some(env_from) => env_from,
-            None => return Ok(Vec::new()),
+            None => return Ok(HashMap::new()),
         };
 
         let secrets_to_fetch: Vec<String> = env_from
@@ -86,10 +86,10 @@ impl KubernetesClient {
             })
             .collect();
 
-        let mut env_vars = Vec::new();
+        let mut env_vars = HashMap::new();
         for secret_name in secrets_to_fetch {
-            let mut secret_env_vars = self.get_secret(&secret_name).await?;
-            env_vars.append(&mut secret_env_vars);
+            let secret_env_vars = self.get_secret(&secret_name).await?;
+            env_vars.extend(secret_env_vars);
         }
 
         Ok(env_vars)
