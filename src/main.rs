@@ -6,7 +6,7 @@ mod kubernetes_client;
 mod nais;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> std::io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let nais_config_path = if args.len() > 1 {
         &args[1]
@@ -55,19 +55,35 @@ async fn main() {
         println!("VAR {} = VALUE {}", key, value);
     }
 
-    let shell_binary = env::var("SHELL").unwrap();
-    println!("Shell binary: {}", shell_binary);
+    let shell = if cfg!(target_os = "windows") {
+        String::from("cmd")
+    } else {
+        env::var("SHELL").unwrap_or_else(|_| String::from("/bin/sh"))
+    };
 
-    let mut command = Command::new("zsh");
-
+    // Create command for the shell
+    let mut command = Command::new(shell);
     for (key, value) in &env_vars {
         command.env(key, value);
     }
 
-    let child = Command::new("sh")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .envs(&env_vars)
-        .spawn()
-        .unwrap();
+    // Make it interactive by setting stdio options
+    command
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit());
+
+    // Execute the command
+    match command.spawn() {
+        Ok(mut child) => {
+            // Wait for the shell to exit
+            match child.wait() {
+                Ok(status) => println!("Shell exited with status: {}", status),
+                Err(e) => eprintln!("Error waiting for shell: {}", e),
+            }
+        }
+        Err(e) => eprintln!("Failed to launch shell: {}", e),
+    }
+
+    Ok(())
 }
