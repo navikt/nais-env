@@ -276,6 +276,29 @@ pub struct NaisConfigLoader {
 }
 
 impl NaisConfigLoader {
+    /// Creates a new `NaisConfigLoader` instance from a configuration file.
+    ///
+    /// This function reads the NAIS configuration from the specified file path,
+    /// validates that it contains an "Application" kind, and parses it into a
+    /// structured representation.
+    ///
+    /// # Arguments
+    /// * `config_path` - The path to the NAIS configuration file
+    ///
+    /// # Returns
+    /// A `Result` containing either the constructed `NaisConfigLoader` or an error
+    /// if the file cannot be read or parsed.
+    ///
+    /// # Errors
+    /// This function will return an error if:
+    /// * The configuration file cannot be read
+    /// * The configuration does not contain "kind: \"Application\""
+    /// * The YAML cannot be parsed into the expected structure
+    ///
+    /// # Example
+    /// ```
+    /// let config_loader = NaisConfigLoader::new("nais.yaml".to_string())?;
+    /// ```
     pub fn new(config_path: String) -> Result<Self, Box<dyn std::error::Error>> {
         let content = match std::fs::read_to_string(&config_path) {
             Ok(content) => content,
@@ -297,34 +320,61 @@ impl NaisConfigLoader {
         Ok(NaisConfigLoader { config })
     }
 
-    pub fn get_namespace(&self) -> &str {
-        &self.config.metadata.namespace
+    /// Retrieves the namespace from the NAIS configuration.
+    ///
+    /// This method returns the namespace specified in the metadata section
+    /// of the NAIS configuration file.
+    ///
+    /// # Returns
+    /// A `String` containing the namespace.
+    ///
+    /// # Example
+    /// ```
+    /// let config_loader = NaisConfigLoader::new("nais.yaml".to_string()).unwrap();
+    /// let namespace = config_loader.get_namespace();
+    /// println!("Namespace: {}", namespace);
+    /// ```
+    pub fn get_namespace(&self) -> String {
+        self.config.metadata.namespace.clone()
     }
 
-    pub fn get_env_vars(&self) -> HashMap<String, String> {
-        let mut env_vars = HashMap::new();
+    /// Retrieves the deployment name from the NAIS configuration.
+    ///
+    /// This method returns the name of the application as defined in the metadata
+    /// section of the NAIS configuration file.
+    ///
+    /// # Returns
+    /// A `String` containing the deployment name.
+    ///
+    /// # Example
+    /// ```
+    /// let config_loader = NaisConfigLoader::new("nais.yaml".to_string()).unwrap();
+    /// let deployment_name = config_loader.get_deployment();
+    /// println!("Deployment name: {}", deployment_name);
+    /// ```
+    pub fn get_deployment(&self) -> String {
+        self.config.metadata.name.clone()
+    }
+
+    /// Retrieves all environment variables defined in the NAIS configuration file.
+    ///
+    /// # Returns
+    /// A sorted `BTreeMap` where keys are environment variable names and values are their corresponding values.
+    /// If an environment variable is defined without a value in the config, an empty string is used as default.
+    ///
+    /// # Example
+    /// ```
+    /// let config_loader = NaisConfigLoader::new("nais.yaml".to_string()).unwrap();
+    /// let env_vars = config_loader.get_env_vars();
+    /// // Use the environment variables
+    /// ```
+    pub fn get_env_vars(&self) -> std::collections::BTreeMap<String, String> {
+        let mut env_vars = std::collections::BTreeMap::new();
         if let Some(env) = &self.config.spec.env {
             for e in env {
                 env_vars.insert(e.name.clone(), e.value.clone().unwrap_or_default());
             }
         }
         env_vars
-    }
-
-    pub fn get_env_var_from_secret_keys(&self) -> Vec<String> {
-        let secret_keys = self
-            .config
-            .spec
-            .envFrom
-            .as_ref()
-            .map(|env_from| {
-                env_from
-                    .iter()
-                    .filter_map(|e| e.secret.as_ref().map(|secret| secret.clone()))
-                    .collect()
-            })
-            .expect("Could not get secrets from env");
-
-        secret_keys
     }
 }

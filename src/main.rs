@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, process::Command};
+use std::{env, process::Command};
 
 use clap::Parser;
 mod kubernetes_client;
@@ -32,32 +32,43 @@ async fn main() -> std::io::Result<()> {
     let file_path = args.file;
     let config_file = args.config;
 
-    let nais_config = nais::NaisConfigLoader::new(config_file.clone()).expect("data");
+    let nais_config =
+        nais::NaisConfigLoader::new(config_file.clone()).expect("Could not load config file");
 
-    let current_namespace = nais_config.get_namespace();
+    let kubernetes_client = kubernetes_client::KubernetesClient::new(
+        nais_config.get_namespace(),
+        nais_config.get_deployment(),
+    )
+    .await
+    .expect("Failed to create Kubernetes client");
 
-    let kubernetes_client = kubernetes_client::KubernetesClient::new(current_namespace.to_string())
+    let secret_keys = kubernetes_client
+        .get_env_from_secrets()
         .await
-        .expect("Failed to create Kubernetes client");
+        .expect("Could not get secrets from kubernetes");
 
-    let mut env_vars = nais_config.get_env_vars();
-
-    let secret_keys = nais_config.get_env_var_from_secret_keys();
-
-    let mut collected_secrets = Vec::new();
+    let mut collected_secrets = std::collections::BTreeMap::new();
     for secret_name in secret_keys {
         match kubernetes_client.get_secret(&secret_name).await {
-            Ok(secrets) => collected_secrets.extend(secrets),
+            Ok(secrets) => {
+                for (key, value) in secrets {
+                    collected_secrets.insert(key, value);
+                }
+            }
             Err(e) => eprintln!("Failed to fetch secret {}: {}", secret_name, e),
         }
     }
 
-    for (key, value) in &collected_secrets {
-        env_vars.insert(key.clone(), value.clone());
-    }
+    let nais_config_env_vars = nais_config.get_env_vars();
+
+    // Combine env_vars and secrets into a sorted map
+    let all_env_vars: std::collections::BTreeMap<String, String> = collected_secrets
+        .into_iter()
+        .chain(nais_config_env_vars)
+        .collect();
 
     if let Some(file) = file_path {
-        match save_env_vars_to_file(&file, &env_vars) {
+        match save_env_vars_to_file(&file, &all_env_vars) {
             Ok(_) => println!("Successfully saved environment variables to file: {}", file),
             Err(e) => eprintln!("Failed to save environment variables to file: {}", e),
         }
@@ -65,23 +76,22 @@ async fn main() -> std::io::Result<()> {
 
     if args.print {
         println!("Environment Variables:");
-        for (key, value) in &env_vars {
+        for (key, value) in &all_env_vars {
             println!("{}={}", key, value);
         }
     }
 
     if args.shell {
         println!("Spawning shell with environment variables...");
-        spawn_interactive_shell(&env_vars)?;
+        spawn_interactive_shell(&all_env_vars)?;
     }
-
 
     Ok(())
 }
 
 fn save_env_vars_to_file(
     filename: &str,
-    env_vars: &HashMap<String, String>,
+    env_vars: &std::collections::BTreeMap<String, String>,
 ) -> std::io::Result<()> {
     // Convert relative path to absolute path
     let path = std::path::Path::new(filename);
@@ -99,7 +109,9 @@ fn save_env_vars_to_file(
     Ok(())
 }
 
-fn spawn_interactive_shell(env_vars: &HashMap<String, String>) -> std::io::Result<()> {
+fn spawn_interactive_shell(
+    env_vars: &std::collections::BTreeMap<String, String>,
+) -> std::io::Result<()> {
     let shell = if cfg!(target_os = "windows") {
         String::from("cmd")
     } else {
