@@ -301,10 +301,6 @@ impl NaisConfigLoader {
         &self.config.metadata.namespace
     }
 
-    pub fn get_deployment(&self) -> &str {
-        &self.config.metadata.name
-    }
-
     pub fn get_env_vars(&self) -> HashMap<String, String> {
         let mut env_vars = HashMap::new();
         if let Some(env) = &self.config.spec.env {
