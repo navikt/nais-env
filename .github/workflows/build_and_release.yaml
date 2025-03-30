@@ -1,0 +1,27 @@
+name: Rust
+
+on:
+  push:
+    branches: ["main", "4-github-actions"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Setup cross toolchain
+        run: cargo install cross
+
+      - name: cross compile
+        run: |
+          cross build --release --target x86_64-unknown-linux-gnu
+          cross build --release --target aarch64-unknown-linux-gnu
