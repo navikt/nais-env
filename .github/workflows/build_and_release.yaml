@@ -75,9 +75,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: nais-env-${{ github.ref_name }}
-          files:
-            - target/release/nais-env-macosx
-            - target/release/nais-env-linux
-            - target/release/nais-env-windows
+          files: |
+            target/release/nais-env-macosx
+            target/release/nais-env-linux
+            target/release/nais-env-windows
           generate_release_notes: true
           draft: true
