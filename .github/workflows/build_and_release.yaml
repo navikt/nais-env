@@ -76,7 +76,7 @@ jobs:
         with:
           name: nais-env-${{ github.ref_name }}
           files: |
-            release/linux/nais-env-macosx
-            release/linux/nais-env-linux
+            release/linux/nais-env
+            release/linux/nais-env
           generate_release_notes: true
           draft: true
