@@ -82,7 +82,7 @@ jobs:
       - uses: ncipollo/release-action@v1
         name: Release
         with:
-          artifacts: "release-linux/nais-env,release-macosx/nais-env"
+          artifacts: "release-linux/*,release-macosx/*"
           replacesArtifacts: true
           generateReleaseNotes: true
           artifactErrorsFailBuild: true
