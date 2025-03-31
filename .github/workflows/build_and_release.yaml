@@ -60,12 +60,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: nais-env-macosx
-          path: target/release/nais-env
+          path: release/linux/nais-env
 
       - uses: actions/download-artifact@v4
         with:
           name: nais-env-linux
-          path: target/release/nais-env
+          path: release/linux/nais-env
 
       #      - uses: actions/download-artifact@v4
       #        with:
@@ -76,7 +76,7 @@ jobs:
         with:
           name: nais-env-${{ github.ref_name }}
           files: |
-            nais-env-macosx
-            nais-env-linux
+            release/linux/nais-env-macosx
+            release/linux/nais-env-linux
           generate_release_notes: true
           draft: true
