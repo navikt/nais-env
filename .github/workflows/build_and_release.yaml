@@ -23,11 +23,14 @@ jobs:
       - name: build macos artifact
         run: cargo build --release
 
+      - name: Rename file
+        run: mv target/release/nais-env target/release/nais-env-macos
+
       - name: upload macos artifact
         uses: actions/upload-artifact@v4
         with:
           name: nais-env-macosx
-          path: target/release/nais-env
+          path: target/release/nais-env-macos
 
   build-linux:
     name: Build Linux Artifact
@@ -38,11 +41,14 @@ jobs:
       - name: build macos artifact
         run: cargo build --release
 
+      - name: Rename file
+        run: mv target/release/nais-env target/release/nais-env-linux
+
       - name: upload linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: nais-env-linux
-          path: target/release/nais-env
+          path: target/release/nais-env-linux
 
   #  build-windows:
   #    runs-on: windows-latest
@@ -67,13 +73,11 @@ jobs:
         with:
           name: nais-env-macosx
           path: release-macosx
-          if-no-files-found: error
 
       - uses: actions/download-artifact@v4
         with:
           name: nais-env-linux
           path: release-linux
-          if-no-files-found: error
 
       #- uses: actions/download-artifact@v4
       #  with:
@@ -82,7 +86,7 @@ jobs:
       - uses: ncipollo/release-action@v1
         name: Release
         with:
-          artifacts: "release-linux/*,release-macosx/*"
+          artifacts: "release-linux/nais-env-linux,release-macosx/nais-env-macos"
           replacesArtifacts: true
           generateReleaseNotes: true
           artifactErrorsFailBuild: true
