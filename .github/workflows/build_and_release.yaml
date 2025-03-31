@@ -66,23 +66,23 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: nais-env-macosx
-          path: release
+          path: release-macosx
           if-no-files-found: error
 
       - uses: actions/download-artifact@v4
         with:
           name: nais-env-linux
-          path: release
+          path: release-linux
           if-no-files-found: error
 
-      #      - uses: actions/download-artifact@v4
-      #        with:
-      #          name: nais-env-windows
-      #          path: target/release/nais-env-windows
+      #- uses: actions/download-artifact@v4
+      #  with:
+      #    name: nais-env-windows
+      #    path: target/release/nais-env-windows
       - uses: ncipollo/release-action@v1
         name: Release
         with:
-          artifacts: "nais-env-linux/nais-env,nais-env-macosx/nais-env"
+          artifacts: "release-linux/nais-env,release-macosx/nais-env"
           replacesArtifacts: true
           generateReleaseNotes: true
           artifactErrorsFailBuild: true
