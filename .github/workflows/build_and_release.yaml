@@ -10,6 +10,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: write
+
 jobs:
   build-macos:
     runs-on: macos-latest
@@ -60,7 +63,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: nais-env-macosx
-          path: release/linux/nais-env
+          path: release/mac/nais-env
 
       - uses: actions/download-artifact@v4
         with:
@@ -76,7 +79,7 @@ jobs:
         with:
           name: nais-env-${{ github.ref_name }}
           files: |
-            release/linux/nais-env
+            release/mac/nais-env
             release/linux/nais-env
           generate_release_notes: true
           draft: true
