@@ -74,11 +74,10 @@ jobs:
       #        with:
       #          name: nais-env-windows
       #          path: target/release/nais-env-windows
-      - name: Release
-        uses: softprops/action-gh-release@v2
+      - uses: ncipollo/release-action@v1
+        name: Release
         with:
-          name: nais-env-${{ github.ref_name }}
-          files: |
-            release/linux/nais-env
-            release/mac/nais-env
-          generate_release_notes: true
+          artifacts: "release/mac/nais-env,release/linux/nais-env"
+          replacesArtifacts: true
+          generateReleaseNotes: true
+          artifactErrorsFailBuild: true
