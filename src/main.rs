@@ -1,6 +1,7 @@
 use std::{env, process::Command};
 
 use clap::Parser;
+mod env_file;
 mod kubernetes_client;
 mod nais;
 
@@ -11,6 +12,10 @@ struct Args {
     /// Save Nais configuration to file
     #[arg(short, long)]
     file: Option<String>,
+
+    /// Files with environment variables that override the ones from Kubernetes
+    #[arg(short, long)]
+    overrides: Option<Vec<String>>,
 
     /// Path to nais.yaml
     #[arg(short, long)]
@@ -31,6 +36,12 @@ async fn main() -> std::io::Result<()> {
 
     let file_path = args.file;
     let config_file = args.config;
+
+    let overrides = if let Some(override_files) = args.overrides {
+        env_file::parse_multiple_env_files(override_files)?
+    } else {
+        std::collections::BTreeMap::new()
+    };
 
     let nais_config =
         nais::NaisConfigLoader::new(config_file.clone()).expect("Could not load config file");
@@ -65,6 +76,7 @@ async fn main() -> std::io::Result<()> {
     let all_env_vars: std::collections::BTreeMap<String, String> = collected_secrets
         .into_iter()
         .chain(nais_config_env_vars)
+        .chain(overrides)
         .collect();
 
     if let Some(file) = file_path {
