@@ -118,6 +118,12 @@ fn spawn_interactive_shell(
     env_vars: &std::collections::BTreeMap<String, String>,
     config_file: &str,
 ) -> std::io::Result<()> {
+    // Check if we're already in a NAIS environment shell
+    if env::var("NAIS_ENV_ACTIVE").is_ok() {
+        println!("Already in a NAIS environment shell. Not spawning a new one.");
+        return Ok(());
+    }
+
     let shell = if cfg!(target_os = "windows") {
         String::from("cmd")
     } else {
