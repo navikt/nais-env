@@ -3,6 +3,8 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
+use crate::git;
+
 /// Reads and parses an environment file into a BTreeMap
 ///
 /// # Arguments
@@ -67,6 +69,23 @@ pub fn parse_multiple_env_files<P: AsRef<Path>>(
     Ok(combined_env_vars)
 }
 
+/// Saves environment variables to a file and adds it to Git's exclude list if in a Git repository
+///
+/// # Arguments
+///
+/// * `filename` - Path to the file where environment variables will be saved
+/// * `env_vars` - BTreeMap containing environment variables as key-value pairs
+///
+/// # Returns
+///
+/// * `io::Result<()>` - Success or error
+///
+/// # Details
+///
+/// This function:
+/// 1. Creates a file and writes environment variables in the format `KEY=VALUE`
+/// 2. If in a Git repository, adds the file to `.git/info/exclude` to prevent accidental commits
+/// 3. Groups added files under a "# Added by nais-env" comment in the exclude file
 pub fn save_env_vars_to_file(
     filename: &str,
     env_vars: &std::collections::BTreeMap<String, String>,
@@ -84,61 +103,16 @@ pub fn save_env_vars_to_file(
     }
 
     // If in a git repository make sure git ignores file by adding it to .git/info/exclude
-    if let Ok(output) = std::process::Command::new("git")
-        .args(["rev-parse", "--is-inside-work-tree"])
-        .output()
-    {
-        if output.status.success() {
-            let git_dir = std::process::Command::new("git")
-                .args(["rev-parse", "--git-dir"])
-                .output()
-                .ok()
-                .and_then(|output| String::from_utf8(output.stdout).ok())
-                .map(|s| s.trim().to_string());
+    if git::is_in_git_repo() {
+        if let Some(exclude_path) = git::get_git_exclude_path() {
+            if exclude_path.exists() {
+                let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+                let exclude_content = std::fs::read_to_string(&exclude_path).unwrap_or_default();
+                let lines: Vec<&str> = exclude_content.lines().collect();
 
-            if let Some(git_dir) = git_dir {
-                let exclude_path = std::path::Path::new(&git_dir).join("info/exclude");
-                if exclude_path.exists() {
-                    let file_name = path.file_name().unwrap_or_default().to_string_lossy();
-
-                    // Check if the file is already in the exclude file
-                    let exclude_content =
-                        std::fs::read_to_string(&exclude_path).unwrap_or_default();
-                    let lines: Vec<&str> = exclude_content.lines().collect();
-
-                    // Only add if it doesn't already exist
-                    if !lines.contains(&file_name.as_ref()) {
-                        if !lines.contains(&"# Added by nais-env") {
-                            // Add comment and filename at the end if comment doesn't exist
-                            if let Ok(mut exclude_file) =
-                                std::fs::OpenOptions::new().append(true).open(&exclude_path)
-                            {
-                                use std::io::Write;
-                                let _ = writeln!(exclude_file, "# Added by nais-env");
-                                let _ = writeln!(exclude_file, "{}", file_name);
-                            }
-                        } else {
-                            // If comment exists, insert filename right after it
-                            let mut new_content = String::new();
-                            let mut inserted = false;
-
-                            for line in lines {
-                                new_content.push_str(line);
-                                new_content.push('\n');
-
-                                if line == "# Added by nais-env" && !inserted {
-                                    new_content.push_str(&format!("{}\n", file_name));
-                                    inserted = true;
-                                }
-                            }
-
-                            if let Ok(_) = std::fs::write(&exclude_path, new_content) {
-                                println!(
-                                    "Added {} to local git exclude file (.git/info/exclude)",
-                                    file_name
-                                );
-                            }
-                        }
+                if !lines.contains(&file_name.as_ref()) {
+                    if let Err(e) = git::add_to_git_exclude(path) {
+                        eprintln!("Warning: Failed to add file to git exclude: {}", e);
                     }
                 }
             }
@@ -147,6 +121,7 @@ pub fn save_env_vars_to_file(
 
     Ok(())
 }
+
 /// Deletes all files listed under the "# Added by nais-env" comment in .git/info/exclude
 ///
 /// # Returns
@@ -154,70 +129,60 @@ pub fn save_env_vars_to_file(
 /// * `io::Result<()>` - Success or error
 pub fn clear_env_files() -> io::Result<()> {
     // Check if we're in a git repository
-    if let Ok(output) = std::process::Command::new("git")
-        .args(["rev-parse", "--is-inside-work-tree"])
-        .output()
-    {
-        if output.status.success() {
-            // Get git directory
-            let git_dir = std::process::Command::new("git")
-                .args(["rev-parse", "--git-dir"])
-                .output()
-                .ok()
-                .and_then(|output| String::from_utf8(output.stdout).ok())
-                .map(|s| s.trim().to_string());
+    if !git::is_in_git_repo() {
+        return Ok(());
+    }
 
-            if let Some(git_dir) = git_dir {
-                let exclude_path = std::path::Path::new(&git_dir).join("info/exclude");
-                if exclude_path.exists() {
-                    // Read the exclude file
-                    let exclude_content = std::fs::read_to_string(&exclude_path)?;
-                    let lines: Vec<&str> = exclude_content.lines().collect();
+    // Get git exclude path
+    let exclude_path = match git::get_git_exclude_path() {
+        Some(path) if path.exists() => path,
+        _ => return Ok(()),
+    };
 
-                    // Find the "# Added by nais-env" comment
-                    let mut files_to_delete: Vec<String> = Vec::new();
-                    let mut in_nais_env_section = false;
-                    let mut updated_content = String::new();
+    // Read the exclude file
+    let exclude_content = std::fs::read_to_string(&exclude_path)?;
+    let lines: Vec<&str> = exclude_content.lines().collect();
 
-                    // Parse the exclude file
-                    for line in lines {
-                        if line == "# Added by nais-env" {
-                            in_nais_env_section = true;
-                            continue; // Skip this line in the updated content
-                        } else if in_nais_env_section {
-                            if line.is_empty() {
-                                in_nais_env_section = false;
-                                updated_content.push_str("\n");
-                            } else {
-                                files_to_delete.push(line.to_string());
-                                continue; // Skip this line in the updated content
-                            }
-                        } else {
-                            updated_content.push_str(line);
-                            updated_content.push('\n');
-                        }
-                    }
+    // Find the "# Added by nais-env" comment
+    let mut files_to_delete: Vec<String> = Vec::new();
+    let mut in_nais_env_section = false;
+    let mut updated_content = String::new();
 
-                    // Delete the identified files
-                    for file in &files_to_delete {
-                        let file_path = std::path::Path::new(file);
-                        if file_path.exists() {
-                            std::fs::remove_file(file_path)?;
-                            println!("Deleted env file: {}", file);
-                        }
-                    }
-
-                    // Update the exclude file to remove the entries
-                    if !files_to_delete.is_empty() {
-                        std::fs::write(exclude_path, updated_content)?;
-                        println!(
-                            "Removed {} entries from git exclude file",
-                            files_to_delete.len()
-                        );
-                    }
-                }
+    // Parse the exclude file
+    for line in lines {
+        if line == "# Added by nais-env" {
+            in_nais_env_section = true;
+            continue; // Skip this line in the updated content
+        } else if in_nais_env_section {
+            if line.is_empty() {
+                in_nais_env_section = false;
+                updated_content.push_str("\n");
+            } else {
+                files_to_delete.push(line.to_string());
+                continue; // Skip this line in the updated content
             }
+        } else {
+            updated_content.push_str(line);
+            updated_content.push('\n');
         }
+    }
+
+    // Delete the identified files
+    for file in &files_to_delete {
+        let file_path = std::path::Path::new(file);
+        if file_path.exists() {
+            std::fs::remove_file(file_path)?;
+            println!("Deleted env file: {}", file);
+        }
+    }
+
+    // Update the exclude file to remove the entries
+    if !files_to_delete.is_empty() {
+        std::fs::write(exclude_path, updated_content)?;
+        println!(
+            "Removed {} entries from git exclude file",
+            files_to_delete.len()
+        );
     }
 
     Ok(())

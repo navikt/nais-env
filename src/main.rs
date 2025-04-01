@@ -2,6 +2,7 @@ use std::{env, process::Command};
 
 use clap::Parser;
 mod env_file;
+mod git;
 mod kubernetes_client;
 mod nais;
 
