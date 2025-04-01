@@ -13,6 +13,7 @@
 - Mulighet for å skrive ut hemmelighetene direkte (når det er trygt å gjøre det)
 - Legger automatisk til genererte filer i `.git/info/exclude` for å unngå at sensitive data sjekkes inn
 - Kan rydde opp og slette alle genererte miljøfiler med `--clear-files`
+- Setter miljøvariabelen `NAIS_ENV_ACTIVE=true` når shell startes med `--shell`
 
 ## Installasjon
 
@@ -36,6 +37,18 @@ nais-env --config path/to/nais.yaml --print
 # Slett alle miljøfiler som er opprettet av nais-env
 nais-env --clear-files
 ```
+
+### Tilpasning av zsh-prompt
+
+For å få en tilpasset prompt i zsh når du bruker `--shell`, kan du legge til følgende i din `.zshrc`:
+
+```zsh
+if [[ -n "$NAIS_ENV_ACTIVE" ]]; then
+  PROMPT="%F{green}[NAIS-ENV:$NAIS_ENV_CONFIG]%f %~ $ "
+fi
+```
+
+Dette vil gi deg en tydelig indikasjon når du jobber i et shell med NAIS-miljøvariabler.
 
 ## Forutsetninger
 
