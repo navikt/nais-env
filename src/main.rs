@@ -149,12 +149,13 @@ fn spawn_interactive_shell(
     command.env("NAIS_ENV_CONFIG", config_file);
 
     if shell_path.contains("bash") {
-        command.env("PS1", "\\[\\e[32m\\][NAIS-ENV]\\[\\e[0m\\] \\w $ ");
-    } else if shell_path.contains("zsh") {
-        command.env("PROMPT", "%F{green}[NAIS-ENV]%f %~ $ ");
+        command.env(
+            "PS1",
+            "\\[\\e[32m\\][NAIS-ENV:$NAIS_ENV_CONFIG]\\[\\e[0m\\] \\w $ ",
+        );
     } else {
         // Fallback for other shells
-        command.env("PS1", "[NAIS-ENV] \\w $ ");
+        command.env("PS1", "[NAIS-ENV:$NAIS_ENV_CONFIG] \\w $ ");
     }
 
     // Execute the command
