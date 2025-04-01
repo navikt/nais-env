@@ -108,8 +108,7 @@ async fn main() -> std::io::Result<()> {
     }
 
     if args.shell {
-        println!("Spawning shell with environment variables...");
-        spawn_interactive_shell(&all_env_vars)?;
+        spawn_interactive_shell(&all_env_vars, &config_file)?;
     }
 
     Ok(())
@@ -117,7 +116,14 @@ async fn main() -> std::io::Result<()> {
 
 fn spawn_interactive_shell(
     env_vars: &std::collections::BTreeMap<String, String>,
+    config_file: &str,
 ) -> std::io::Result<()> {
+    // Check if we're already in a NAIS environment shell
+    if env::var("NAIS_ENV_ACTIVE").is_ok() {
+        println!("Already in a NAIS environment shell. Not spawning a new one.");
+        return Ok(());
+    }
+
     let shell = if cfg!(target_os = "windows") {
         String::from("cmd")
     } else {
@@ -135,6 +141,22 @@ fn spawn_interactive_shell(
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit());
+
+    let shell_path = env::var("SHELL").unwrap_or_else(|_| String::from("/bin/sh"));
+
+    // Set the environment variable to indicate that the shell is active
+    command.env("NAIS_ENV_ACTIVE", "true");
+    command.env("NAIS_ENV_CONFIG", config_file);
+
+    if shell_path.contains("bash") {
+        command.env(
+            "PS1",
+            "\\[\\e[32m\\][NAIS-ENV:$NAIS_ENV_CONFIG]\\[\\e[0m\\] \\w $ ",
+        );
+    } else {
+        // Fallback for other shells
+        command.env("PS1", "[NAIS-ENV:$NAIS_ENV_CONFIG] \\w $ ");
+    }
 
     // Execute the command
     match command.spawn() {
