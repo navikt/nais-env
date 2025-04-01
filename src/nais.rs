@@ -307,9 +307,8 @@ impl NaisConfigLoader {
             }
         };
 
-        // Check if kind is "Application" before parsing and panic if not
-        if !content.contains("kind: \"Application\"") {
-            panic!("Expected kind: Application");
+        if !content.contains("kind: \"Application\"") && !content.contains("kind: Application") {
+            return Err("Expected kind: Application".into());
         }
 
         let config: NaisConfig = match serde_yaml::from_str(&content) {
