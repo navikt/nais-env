@@ -28,11 +28,24 @@ struct Args {
     /// Spawn shell with secrets as enviroment variables
     #[arg(short, long)]
     shell: bool,
+
+    /// Clear all files added by nais-env (must be in git repository)
+    #[arg(long)]
+    clear_files: bool,
 }
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
+
+    if args.clear_files {
+        if let Err(e) = env_file::clear_env_files() {
+            eprintln!("Failed to clear env files: {}", e);
+            return Err(e);
+        }
+        println!("Successfully cleared environment files");
+        return Ok(());
+    }
 
     let file_path = args.file;
     let config_file = args.config;
@@ -80,7 +93,7 @@ async fn main() -> std::io::Result<()> {
         .collect();
 
     if let Some(file) = file_path {
-        match save_env_vars_to_file(&file, &all_env_vars) {
+        match env_file::save_env_vars_to_file(&file, &all_env_vars) {
             Ok(_) => println!("Successfully saved environment variables to file: {}", file),
             Err(e) => eprintln!("Failed to save environment variables to file: {}", e),
         }
@@ -98,26 +111,6 @@ async fn main() -> std::io::Result<()> {
         spawn_interactive_shell(&all_env_vars)?;
     }
 
-    Ok(())
-}
-
-fn save_env_vars_to_file(
-    filename: &str,
-    env_vars: &std::collections::BTreeMap<String, String>,
-) -> std::io::Result<()> {
-    // Convert relative path to absolute path
-    let path = std::path::Path::new(filename);
-
-    // Create file for writing
-    let mut file = std::fs::File::create(path)?;
-
-    // Write each environment variable as KEY=VALUE
-    for (key, value) in env_vars {
-        use std::io::Write;
-        writeln!(file, "{}={}", key, value)?;
-    }
-
-    println!("Environment variables saved to: {:?}", path);
     Ok(())
 }
 
