@@ -133,11 +133,14 @@ pub fn clear_env_files() -> io::Result<()> {
         return Ok(());
     }
 
-    // Get git exclude path
+    // Get git exclude path and repository root
     let exclude_path = match git::get_git_exclude_path() {
         Some(path) if path.exists() => path,
         _ => return Ok(()),
     };
+
+    // Get repository root directory
+    let repo_root = git::get_repo_root();
 
     // Read the exclude file
     let exclude_content = std::fs::read_to_string(&exclude_path)?;
@@ -169,10 +172,11 @@ pub fn clear_env_files() -> io::Result<()> {
 
     // Delete the identified files
     for file in &files_to_delete {
-        let file_path = std::path::Path::new(file);
+        // Files are relative to repository root now
+        let file_path = std::path::Path::new(&repo_root).join(file);
         if file_path.exists() {
-            std::fs::remove_file(file_path)?;
-            println!("Deleted env file: {}", file);
+            std::fs::remove_file(&file_path)?;
+            println!("Deleted env file: {}", file_path.display());
         }
     }
 
