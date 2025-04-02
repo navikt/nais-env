@@ -14,6 +14,7 @@
 - Legger automatisk til genererte filer i `.git/info/exclude` for å unngå at sensitive data sjekkes inn
 - Kan rydde opp og slette alle genererte miljøfiler med `--clear-files`
 - Setter miljøvariabelen `NAIS_ENV_ACTIVE=true` når shell startes med `--shell`
+- Støtter spesifisering av Kubernetes-kontekst (begrenset til 'nais-dev' og 'dev-fss')
 
 ## Installasjon
 
@@ -36,6 +37,9 @@ nais-env --config path/to/nais.yaml --print
 
 # Slett alle miljøfiler som er opprettet av nais-env
 nais-env --clear-files
+
+# Spesifiser Kubernetes-kontekst (nais-dev eller dev-fss)
+nais-env --config path/to/nais.yaml --context dev-fss
 ```
 
 ### Tilpasning av zsh-prompt

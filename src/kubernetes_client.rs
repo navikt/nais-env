@@ -5,15 +5,18 @@ use std::{collections::BTreeMap, str};
 pub struct KubernetesClient {
     client: Client,
     deployment: String,
+    namespace: String,
+    context: String,
 }
 
 impl KubernetesClient {
-    /// Creates a new Kubernetes client instance configured for a specific namespace and deployment.
+    /// Creates a new Kubernetes client instance configured for a specific namespace, deployment, and context.
     ///
     /// # Arguments
     ///
     /// * `namespace` - The Kubernetes namespace to operate within
     /// * `deployment` - The name of the deployment to target
+    /// * `context` - The Kubernetes context to use (e.g., 'nais-dev' or 'dev-fss')
     ///
     /// # Returns
     ///
@@ -23,15 +26,28 @@ impl KubernetesClient {
     ///
     /// Returns a `kube::Error` if the Kubernetes configuration cannot be loaded or if the client
     /// cannot be created from the configuration.
-    pub async fn new(namespace: String, deployment: String) -> Result<Self, kube::Error> {
-        let mut config = Config::infer()
-            .await
-            .expect("Failed to find kubernetes config");
+    pub async fn new(
+        namespace: String,
+        deployment: String,
+        context: String,
+    ) -> Result<Self, kube::Error> {
+        let mut config = Config::from_kubeconfig(&kube::config::KubeConfigOptions {
+            context: Some(context.clone()),
+            ..Default::default()
+        })
+        .await
+        .expect("Failed to load kubernetes config");
+
         config.default_namespace = namespace.clone();
 
-        let client = Client::try_from(config).expect("Could not find Kubernetes config");
+        let client = Client::try_from(config)?;
 
-        Ok(Self { client, deployment })
+        Ok(Self {
+            client,
+            deployment,
+            namespace,
+            context,
+        })
     }
 
     /// Retrieves a Kubernetes secret and converts its data into a key-value map.
@@ -87,25 +103,29 @@ impl KubernetesClient {
     /// Returns an error if fetching the deployment information fails or if there's
     /// an issue accessing the Kubernetes API.
     pub async fn get_env_from_secrets(&self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-        let deployments =
-            Api::<k8s_openapi::api::apps::v1::Deployment>::default_namespaced(self.client.clone())
-                .list(&Default::default())
-                .await?;
+        let api =
+            Api::<k8s_openapi::api::apps::v1::Deployment>::default_namespaced(self.client.clone());
+
+        let deployment = api.get(&self.deployment).await.map_err(|e| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!(
+                    "Failed to get deployment '{}' in namespace '{}' with context '{}': {}",
+                    self.deployment, self.namespace, self.context, e
+                ),
+            )) as Box<dyn std::error::Error>
+        })?;
 
         let mut secret_names = Vec::new();
 
-        for deployment in deployments.items {
-            if deployment.metadata.name == Some(self.deployment.clone()) {
-                if let Some(spec) = deployment.spec {
-                    let template = spec.template;
-                    if let Some(pod_spec) = template.spec {
-                        for container in pod_spec.containers {
-                            if let Some(env_from) = container.env_from {
-                                for env_source in env_from {
-                                    if let Some(secret_ref) = env_source.secret_ref {
-                                        secret_names.push(secret_ref.name);
-                                    }
-                                }
+        if let Some(spec) = deployment.spec {
+            let template = spec.template;
+            if let Some(pod_spec) = template.spec {
+                for container in pod_spec.containers {
+                    if let Some(env_from) = container.env_from {
+                        for env_source in env_from {
+                            if let Some(secret_ref) = env_source.secret_ref {
+                                secret_names.push(secret_ref.name);
                             }
                         }
                     }
