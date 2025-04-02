@@ -26,9 +26,9 @@ struct Args {
     #[arg(short, long)]
     print: bool,
 
-    /// Spawn shell with secrets as enviroment variables
-    #[arg(short, long)]
-    shell: bool,
+    /// Spawn shell with secrets as environment variables or run specified command
+    #[arg(short, long, default_missing_value = "SHELL" , num_args = 0..=1)]
+    shell: Option<String>,
 
     /// Clear all files added by nais-env (must be in git repository)
     #[arg(long)]
@@ -107,8 +107,13 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    if args.shell {
-        spawn_interactive_shell(&all_env_vars, &config_file)?;
+    if let Some(shell_value) = args.shell.as_deref() {
+        let shell_command = if shell_value == "SHELL" {
+            None
+        } else {
+            Some(shell_value)
+        };
+        spawn_interactive_shell(&all_env_vars, &config_file, shell_command)?;
     }
 
     Ok(())
@@ -117,7 +122,8 @@ async fn main() -> std::io::Result<()> {
 fn spawn_interactive_shell(
     env_vars: &std::collections::BTreeMap<String, String>,
     config_file: &str,
-) -> std::io::Result<()> {
+    shell_command: Option<&str>,
+) -> Result<(), std::io::Error> {
     // Check if we're already in a NAIS environment shell
     if env::var("NAIS_ENV_ACTIVE").is_ok() {
         println!("Already in a NAIS environment shell. Not spawning a new one.");
@@ -131,7 +137,19 @@ fn spawn_interactive_shell(
     };
 
     // Create command for the shell
-    let mut command = Command::new(shell);
+    let mut command = if let Some(cmd) = shell_command {
+        let cmd_args = if cfg!(target_os = "windows") {
+            vec!["/C", cmd]
+        } else {
+            vec!["-c", cmd]
+        };
+        let mut c = Command::new(&shell);
+        c.args(&cmd_args);
+        c
+    } else {
+        Command::new(shell)
+    };
+
     for (key, value) in env_vars {
         command.env(key, value);
     }
@@ -160,15 +178,27 @@ fn spawn_interactive_shell(
 
     // Execute the command
     match command.spawn() {
-        Ok(mut child) => {
-            // Wait for the shell to exit
-            match child.wait() {
-                Ok(status) => println!("Shell exited with status: {}", status),
-                Err(e) => eprintln!("Error waiting for shell: {}", e),
+        Ok(mut child) => match child.wait() {
+            Ok(status) => {
+                if shell_command.is_some() {
+                    println!("Command exited with status: {}", status);
+                } else {
+                    println!("Shell exited with status: {}", status);
+                }
+                Ok(())
             }
+            Err(e) => {
+                eprintln!("Error waiting for process: {}", e);
+                Err(e)
+            }
+        },
+        Err(e) => {
+            if shell_command.is_some() {
+                eprintln!("Failed to execute command: {}", e);
+            } else {
+                eprintln!("Failed to launch shell: {}", e);
+            }
+            Err(e)
         }
-        Err(e) => eprintln!("Failed to launch shell: {}", e),
     }
-
-    Ok(())
 }
