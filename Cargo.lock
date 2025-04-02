@@ -1050,7 +1050,7 @@ dependencies = [
 
 [[package]]
 name = "nais-env"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "clap",
  "k8s-openapi",

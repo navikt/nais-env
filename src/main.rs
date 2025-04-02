@@ -20,7 +20,7 @@ struct Args {
 
     /// Path to nais.yaml
     #[arg(short, long)]
-    config: String,
+    config: Option<String>,
 
     /// Print secrets
     #[arg(short, long)]
@@ -44,12 +44,13 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
     if args.clear_files {
-        if let Err(e) = env_file::clear_env_files() {
-            eprintln!("Failed to clear env files: {}", e);
-            return Err(e);
+        match env_file::clear_env_files() {
+            Ok(_) => std::process::exit(0),
+            Err(e) => {
+                eprintln!("Error clearing env files: {}", e);
+                std::process::exit(1);
+            }
         }
-        println!("Successfully cleared environment files");
-        return Ok(());
     }
 
     const ALLOWED_CONTEXTS: [&str; 2] = ["nais-dev", "dev-fss"];
@@ -64,13 +65,18 @@ async fn main() -> std::io::Result<()> {
         std::process::exit(1);
     }
 
-    let file_path = args.file;
-    let config_file = args.config;
-
     let overrides = if let Some(override_files) = args.overrides {
         env_file::parse_multiple_env_files(override_files)?
     } else {
         std::collections::BTreeMap::new()
+    };
+
+    let config_file = match args.config {
+        Some(path) => path,
+        None => {
+            eprintln!("Error: Missing --config[-c] argument. Please provide a path to nais.yaml");
+            std::process::exit(1);
+        }
     };
 
     let nais_config =
@@ -110,7 +116,7 @@ async fn main() -> std::io::Result<()> {
         .chain(overrides)
         .collect();
 
-    if let Some(file) = file_path {
+    if let Some(file) = args.file {
         match env_file::save_env_vars_to_file(&file, &all_env_vars) {
             Ok(_) => println!("Successfully saved environment variables to file: {}", file),
             Err(e) => eprintln!("Failed to save environment variables to file: {}", e),
