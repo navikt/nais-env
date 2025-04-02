@@ -33,6 +33,10 @@ struct Args {
     /// Clear all files added by nais-env (must be in git repository)
     #[arg(long)]
     clear_files: bool,
+
+    /// Kubernetes context to use (only 'nais-dev' or 'dev-fss' are supported), defaults to nais-dev
+    #[arg(long, default_value = "nais-dev")]
+    context: String,
 }
 
 #[tokio::main]
@@ -46,6 +50,18 @@ async fn main() -> std::io::Result<()> {
         }
         println!("Successfully cleared environment files");
         return Ok(());
+    }
+
+    const ALLOWED_CONTEXTS: [&str; 2] = ["nais-dev", "dev-fss"];
+
+    // Check if context is allowed, if not exit with error
+    if !ALLOWED_CONTEXTS.contains(&args.context.as_str()) {
+        eprintln!(
+            "Error: Invalid context '{}'. Must be one of: {}",
+            args.context,
+            ALLOWED_CONTEXTS.join(", ")
+        );
+        std::process::exit(1);
     }
 
     let file_path = args.file;
@@ -63,6 +79,7 @@ async fn main() -> std::io::Result<()> {
     let kubernetes_client = kubernetes_client::KubernetesClient::new(
         nais_config.get_namespace(),
         nais_config.get_deployment(),
+        args.context,
     )
     .await
     .expect("Failed to create Kubernetes client");
