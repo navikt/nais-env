@@ -9,6 +9,7 @@ mod env_file;
 mod git;
 mod kubernetes_client;
 mod nais;
+mod oauth;
 
 /// Set up configuration from Nais locally
 #[derive(Parser, Debug)]
@@ -29,6 +30,10 @@ struct Args {
     /// Print secrets
     #[arg(short, long)]
     print: bool,
+
+    /// Do authentication, must specify Oauth scope
+    #[arg(short, long)]
+    auth: Option<String>,
 
     /// Spawn shell with secrets as environment variables or run specified command
     #[arg(short, long, default_missing_value = "SHELL" , num_args = 0..=1)]
@@ -147,11 +152,26 @@ async fn main() -> std::io::Result<()> {
     let nais_config_env_vars = nais_config.get_env_vars();
 
     // Combine env_vars and secrets into a sorted map
-    let all_env_vars: std::collections::BTreeMap<String, String> = collected_secrets
+    let mut all_env_vars: std::collections::BTreeMap<String, String> = collected_secrets
         .into_iter()
         .chain(nais_config_env_vars)
-        .chain(overrides)
+        .chain(overrides.clone())
         .collect();
+
+    // Attempt to create OAuth client and get access token only if auth flag is set
+    // Add ACCESS_TOKEN to environment if successful
+    if let Some(scope) = &args.auth {
+        match oauth::OAuthClient::new_from_env(&all_env_vars, scope.clone()).await {
+            Ok(access_token) => {
+                println!("Successfully obtained OAuth access token");
+                all_env_vars.insert("ACCESS_TOKEN".to_string(), access_token);
+            }
+            Err(e) => {
+                eprintln!("Failed to obtain OAuth access token: {}", e);
+                // Continue without access token
+            }
+        }
+    }
 
     if let Some(file) = args.file {
         match env_file::save_env_vars_to_file(&file, &all_env_vars) {
