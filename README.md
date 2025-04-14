@@ -20,6 +20,53 @@
 
 TODO: Fix etter github-action
 
+### Tab-completion
+
+Nais-env støtter tab-completion for bash, zsh, fish og PowerShell. Du kan generere completion-skript ved å bruke følgende kommandoer:
+
+#### Bash
+
+```bash
+# Generer og installer completion-skript for gjeldende bruker
+nais-env completion bash > ~/.bash_completion
+
+# På noen systemer må du kanskje laste inn skriptet manuelt
+echo 'source ~/.bash_completion' >> ~/.bashrc
+```
+
+#### Zsh
+
+```zsh
+# Opprett completion-katalog hvis den ikke finnes
+mkdir -p ~/.zsh/completion
+
+# Generer completion-skript
+nais-env completion zsh > ~/.zsh/completion/_nais-env
+
+# Legg til i .zshrc hvis ikke allerede inkludert
+echo 'fpath=(~/.zsh/completion $fpath)' >> ~/.zshrc
+echo 'autoload -U compinit && compinit' >> ~/.zshrc
+```
+
+#### Fish
+
+```fish
+# Generer og installer completion-skript
+nais-env completion fish > ~/.config/fish/completions/nais-env.fish
+```
+
+#### PowerShell
+
+```powershell
+# Generer completion-skript
+nais-env completion powershell > nais-env.ps1
+
+# Legg til i PowerShell-profilen
+echo ". /path/to/nais-env.ps1" >> $PROFILE
+```
+
+Shell må restartes for at tab-completion skal fungere
+
 ## Bruk
 
 ```bash

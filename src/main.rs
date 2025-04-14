@@ -1,6 +1,10 @@
-use std::{env, process::Command};
+use std::{env, io, process::Command};
 
-use clap::Parser;
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::{
+    generate,
+    shells::{Bash, Fish, PowerShell, Zsh},
+};
 mod env_file;
 mod git;
 mod kubernetes_client;
@@ -37,11 +41,44 @@ struct Args {
     /// Kubernetes context to use (only 'nais-dev' or 'dev-fss' are supported), defaults to nais-dev
     #[arg(long, default_value = "nais-dev")]
     context: String,
+
+    /// Subcommands
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+/// Subcommands
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Generate shell completion scripts
+    Completion {
+        /// Shell to generate completions for
+        #[arg(value_enum)]
+        shell: CompletionShell,
+    },
+}
+
+/// Supported shells for completion
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum CompletionShell {
+    /// Bash shell
+    Bash,
+    /// Zsh shell
+    Zsh,
+    /// Fish shell
+    Fish,
+    /// PowerShell
+    PowerShell,
 }
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
+
+    // Handle completions subcommand
+    if let Some(Commands::Completion { shell }) = &args.command {
+        return generate_completion(shell);
+    }
 
     if args.clear_files {
         match env_file::clear_env_files() {
@@ -224,4 +261,27 @@ fn spawn_interactive_shell(
             Err(e)
         }
     }
+}
+
+/// Generate shell completion scripts
+fn generate_completion(shell: &CompletionShell) -> io::Result<()> {
+    let mut cmd = Args::command();
+    let bin_name = cmd.get_name().to_string();
+
+    match shell {
+        CompletionShell::Bash => {
+            generate(Bash, &mut cmd, bin_name, &mut io::stdout());
+        }
+        CompletionShell::Zsh => {
+            generate(Zsh, &mut cmd, bin_name, &mut io::stdout());
+        }
+        CompletionShell::Fish => {
+            generate(Fish, &mut cmd, bin_name, &mut io::stdout());
+        }
+        CompletionShell::PowerShell => {
+            generate(PowerShell, &mut cmd, bin_name, &mut io::stdout());
+        }
+    }
+
+    Ok(())
 }
