@@ -307,7 +307,10 @@ impl NaisConfigLoader {
             }
         };
 
-        if !content.contains("kind: \"Application\"") && !content.contains("kind: Application") {
+        if !content.contains("kind: \"Application\"")
+            && !content.contains("kind: \'Application\'")
+            && !content.contains("kind: Application")
+        {
             return Err("Expected kind: Application".into());
         }
 
