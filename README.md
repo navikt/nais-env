@@ -124,7 +124,9 @@ if [[ -n "$NAIS_ENV_ACTIVE" ]]; then
 fi
 ```
 
-Dette vil gi deg en tydelig indikasjon når du jobber i et shell med NAIS-miljøvariabler.
+Dette vil gi deg en tydelig indikasjon når du jobber i et shell med NAIS-miljøvariabler:
+
+![Tilpasset zsh-prompt](docs/assets/prompt.png)
 
 ## Forutsetninger
 
