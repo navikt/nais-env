@@ -18,7 +18,32 @@
 
 ## Installasjon
 
-TODO: Fix etter github-action
+1. Last ned den nyeste versjonen av binærfilen for ditt operativsystem fra [GitHub releases](https://github.com/navikt/nais-env/releases)
+
+2. Gi binærfilen kjøretillatelser:
+   ```bash
+   chmod +x nais-env
+   ```
+
+3. Flytt binærfilen til en mappe som er inkludert i din $PATH:
+   ```bash
+   # Eksempel med /usr/local/bin (krever sudo)
+   sudo mv nais-env /usr/local/bin/
+   
+   # Alternativt, for bruker-spesifikk installasjon
+   mkdir -p $HOME/bin
+   mv nais-env $HOME/bin/
+   
+   # Hvis $HOME/bin ikke allerede er i PATH, legg den til
+   echo 'export PATH=$HOME/bin:$PATH' >> ~/.bashrc  # For bash
+   # eller
+   echo 'export PATH=$HOME/bin:$PATH' >> ~/.zshrc   # For zsh
+   ```
+
+4. Verifiser installasjonen:
+   ```bash
+   nais-env --version
+   ```
 
 ### Tab-completion
 
