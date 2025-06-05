@@ -9,6 +9,7 @@ mod env_file;
 mod git;
 mod kubernetes_client;
 mod nais;
+mod yaml_vars;
 
 /// Set up configuration from Nais locally
 #[derive(Parser, Debug)]
@@ -121,11 +122,18 @@ async fn main() -> std::io::Result<()> {
     };
 
     // Get variable file if provided
-    let variable_file = args.variables;
-
-    let nais_config = match variable_file {
-        Some(var_file) => nais::NaisConfigLoader::new_with_variables(config_file.clone(), var_file),
-        None => nais::NaisConfigLoader::new(config_file.clone()),
+    let nais_config = if let Some(var_file) = args.variables {
+        match yaml_vars::parse_variables_file(&var_file) {
+            Ok(variables) => {
+                nais::NaisConfigLoader::new_with_variables(config_file.clone(), variables)
+            }
+            Err(e) => {
+                eprintln!("Error parsing variables file '{}': {}", var_file, e);
+                std::process::exit(1);
+            }
+        }
+    } else {
+        nais::NaisConfigLoader::new(config_file.clone())
     }
     .expect("Could not load config file");
 

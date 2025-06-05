@@ -324,13 +324,13 @@ impl NaisConfigLoader {
 
     /// Creates a new `NaisConfigLoader` instance from a configuration file with variables.
     ///
-    /// This function reads the NAIS configuration from the specified file path and a variables file,
+    /// This function reads the NAIS configuration from the specified file path and a parsed variables object,
     /// validates that the config contains an "Application" kind, and parses it into a
     /// structured representation.
     ///
     /// # Arguments
     /// * `config_path` - The path to the NAIS configuration file
-    /// * `variables_path` - The path to a YAML file containing variables
+    /// * `variables` - A parsed YAML object containing variables for substitution
     ///
     /// # Returns
     /// A `Result` containing either the constructed `NaisConfigLoader` or an error
@@ -339,18 +339,21 @@ impl NaisConfigLoader {
     /// # Errors
     /// This function will return an error if:
     /// * The configuration file cannot be read
-    /// * The variables file cannot be read
     /// * The configuration does not contain "kind: \"Application\""
     /// * The YAML cannot be parsed into the expected structure
     ///
     /// # Example
     /// ```
-    /// let config_loader = NaisConfigLoader::new_with_variables("nais.yaml".to_string(), "vars.yaml".to_string())?;
+    /// let variables = yaml_vars::parse_variables_file("vars.yaml")?;
+    /// let config_loader = NaisConfigLoader::new_with_variables("nais.yaml".to_string(), variables)?;
     /// ```
     pub fn new_with_variables(
         config_path: String,
-        variables_path: String,
+        variables: serde_yaml::Value,
     ) -> Result<Self, Box<dyn std::error::Error>> {
+        // Debug print to show variables were loaded
+        println!("Variables loaded from file: {:?}", variables);
+
         // For now, just use the regular loading method
         // This will be expanded later to handle variable substitution
         Self::new(config_path)
