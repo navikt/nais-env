@@ -26,6 +26,10 @@ struct Args {
     #[arg(short, long)]
     config: Option<String>,
 
+    /// YAML file containing variables
+    #[arg(short, long)]
+    variables: Option<String>,
+
     /// Print secrets
     #[arg(short, long)]
     print: bool,
@@ -116,8 +120,14 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
-    let nais_config =
-        nais::NaisConfigLoader::new(config_file.clone()).expect("Could not load config file");
+    // Get variable file if provided
+    let variable_file = args.variables;
+
+    let nais_config = match variable_file {
+        Some(var_file) => nais::NaisConfigLoader::new_with_variables(config_file.clone(), var_file),
+        None => nais::NaisConfigLoader::new(config_file.clone()),
+    }
+    .expect("Could not load config file");
 
     let kubernetes_client = kubernetes_client::KubernetesClient::new(
         nais_config.get_namespace(),

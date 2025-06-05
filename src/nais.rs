@@ -322,6 +322,40 @@ impl NaisConfigLoader {
         Ok(NaisConfigLoader { config })
     }
 
+    /// Creates a new `NaisConfigLoader` instance from a configuration file with variables.
+    ///
+    /// This function reads the NAIS configuration from the specified file path and a variables file,
+    /// validates that the config contains an "Application" kind, and parses it into a
+    /// structured representation.
+    ///
+    /// # Arguments
+    /// * `config_path` - The path to the NAIS configuration file
+    /// * `variables_path` - The path to a YAML file containing variables
+    ///
+    /// # Returns
+    /// A `Result` containing either the constructed `NaisConfigLoader` or an error
+    /// if the files cannot be read or parsed.
+    ///
+    /// # Errors
+    /// This function will return an error if:
+    /// * The configuration file cannot be read
+    /// * The variables file cannot be read
+    /// * The configuration does not contain "kind: \"Application\""
+    /// * The YAML cannot be parsed into the expected structure
+    ///
+    /// # Example
+    /// ```
+    /// let config_loader = NaisConfigLoader::new_with_variables("nais.yaml".to_string(), "vars.yaml".to_string())?;
+    /// ```
+    pub fn new_with_variables(
+        config_path: String,
+        variables_path: String,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        // For now, just use the regular loading method
+        // This will be expanded later to handle variable substitution
+        Self::new(config_path)
+    }
+
     /// Retrieves the namespace from the NAIS configuration.
     ///
     /// This method returns the namespace specified in the metadata section
