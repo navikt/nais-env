@@ -31,6 +31,10 @@ struct Args {
     #[arg(short, long)]
     variables: Option<String>,
 
+    /// Print processed template after variable substitution
+    #[arg(long)]
+    print_template: bool,
+
     /// Print secrets
     #[arg(short, long)]
     print: bool,
@@ -122,10 +126,16 @@ async fn main() -> std::io::Result<()> {
     };
 
     // Get variable file if provided
-    let nais_config = if let Some(var_file) = args.variables {
+    let (nais_config, processed_template) = if let Some(var_file) = args.variables {
         match yaml_vars::parse_variables_file(&var_file) {
             Ok(variables) => {
-                nais::NaisConfigLoader::new_with_variables(config_file.clone(), variables)
+                let (config_loader, processed) =
+                    nais::NaisConfigLoader::new_with_variables_and_template(
+                        config_file.clone(),
+                        variables,
+                    )
+                    .expect("Could not load config file with variables");
+                (config_loader, Some(processed))
             }
             Err(e) => {
                 eprintln!("Error parsing variables file '{}': {}", var_file, e);
@@ -133,9 +143,24 @@ async fn main() -> std::io::Result<()> {
             }
         }
     } else {
-        nais::NaisConfigLoader::new(config_file.clone())
+        (
+            nais::NaisConfigLoader::new(config_file.clone()).expect("Could not load config file"),
+            None,
+        )
+    };
+
+    // Print processed template if requested
+    if args.print_template {
+        if let Some(template) = &processed_template {
+            println!("Processed Template:");
+            println!("{}", template);
+        } else {
+            println!("No template processing was performed (no variables file provided)");
+        }
     }
-    .expect("Could not load config file");
+
+    // Initialize empty collections for secrets
+    let mut collected_secrets = std::collections::BTreeMap::new();
 
     let kubernetes_client = kubernetes_client::KubernetesClient::new(
         nais_config.get_namespace(),
@@ -150,7 +175,6 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Could not get secrets from kubernetes");
 
-    let mut collected_secrets = std::collections::BTreeMap::new();
     for secret_name in secret_keys {
         match kubernetes_client.get_secret(&secret_name).await {
             Ok(secrets) => {

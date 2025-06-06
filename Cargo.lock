@@ -1065,6 +1065,7 @@ dependencies = [
  "clap_complete",
  "k8s-openapi",
  "kube",
+ "regex",
  "serde",
  "serde_yaml",
  "tokio",
