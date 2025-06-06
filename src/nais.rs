@@ -322,6 +322,58 @@ impl NaisConfigLoader {
         Ok(NaisConfigLoader { config })
     }
 
+    /// Creates a new `NaisConfigLoader` instance from a configuration file with variable substitution,
+    /// and returns both the loader and the processed template content.
+    ///
+    /// This function reads the NAIS configuration from the specified file path,
+    /// substitutes variables, parses it into a structured representation,
+    /// and returns the processed template string as well.
+    ///
+    /// # Arguments
+    /// * `config_path` - The path to the NAIS configuration file
+    /// * `variables` - A YAML structure containing variables for substitution
+    ///
+    /// # Returns
+    /// A `Result` containing either a tuple of the constructed `NaisConfigLoader` and the
+    /// processed template content, or an error if the file cannot be read or parsed.
+    ///
+    /// # Example
+    /// ```
+    /// let variables = yaml_vars::parse_variables_file("vars.yaml")?;
+    /// let (config_loader, processed_template) = NaisConfigLoader::new_with_variables_and_template(
+    ///     "nais.yaml".to_string(),
+    ///     variables
+    /// )?;
+    /// ```
+    pub fn new_with_variables_and_template(
+        config_path: String,
+        variables: serde_yaml::Value,
+    ) -> Result<(Self, String), Box<dyn std::error::Error>> {
+        let content = match std::fs::read_to_string(&config_path) {
+            Ok(content) => content,
+            Err(e) => {
+                return Err(format!("Failed to read config file {}: {}", config_path, e).into());
+            }
+        };
+
+        // Substitute variables in the content using template syntax
+        let processed_content = crate::yaml_vars::substitute_variables(&content, &variables);
+
+        if !processed_content.contains("kind: \"Application\"")
+            && !processed_content.contains("kind: \'Application\'")
+            && !processed_content.contains("kind: Application")
+        {
+            return Err("Expected kind: Application".into());
+        }
+
+        let config: NaisConfig = match serde_yaml::from_str(&processed_content) {
+            Ok(config) => config,
+            Err(e) => panic!("Failed to parse config as YAML: {}", e),
+        };
+
+        Ok((NaisConfigLoader { config }, processed_content))
+    }
+
     /// Retrieves the namespace from the NAIS configuration.
     ///
     /// This method returns the namespace specified in the metadata section
