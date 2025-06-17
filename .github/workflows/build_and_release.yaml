@@ -1,5 +1,3 @@
-# Hentet fra https://fpira.com/blog/2025/01/cross-compilation-in-rust
-
 name: Build and release
 
 on:
@@ -51,18 +49,25 @@ jobs:
           path: target/release/nais-env-linux
 
   build-windows:
+    name: Build Windows Artifact
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: build macos artifact
+      - name: build windows artifact
         run: cargo build --release
+
+      - name: List files
+        run: dir /target/release
+
+      - name: Rename file
+        run: mv target/release/nais-env target/release/nais-env.exe
 
       - name: upload windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: nais-env.exe
-          path: target/release/nais-env
+          path: /target/release/nais-env.exe
 
   release-to-github:
     name: Release
