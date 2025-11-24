@@ -125,7 +125,8 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
-    // Get variable file if provided
+    // Get variable file if provided and store it for later use
+    let variables_file = args.variables.clone();
     let (nais_config, processed_template) = if let Some(var_file) = args.variables {
         match yaml_vars::parse_variables_file(&var_file) {
             Ok(variables) => {
@@ -154,6 +155,10 @@ async fn main() -> std::io::Result<()> {
         if let Some(template) = &processed_template {
             println!("Processed Template:");
             println!("{}", template);
+            // If only printing template, exit early without connecting to Kubernetes
+            if args.file.is_none() && !args.print && args.shell.is_none() {
+                return Ok(());
+            }
         } else {
             println!("No template processing was performed (no variables file provided)");
         }
@@ -215,7 +220,8 @@ async fn main() -> std::io::Result<()> {
         } else {
             Some(shell_value)
         };
-        spawn_interactive_shell(&all_env_vars, &config_file, shell_command)?;
+        let display_config = variables_file.as_deref().unwrap_or(&config_file);
+        spawn_interactive_shell(&all_env_vars, display_config, shell_command)?;
     }
 
     Ok(())

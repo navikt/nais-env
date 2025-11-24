@@ -101,6 +101,12 @@ nais-env --help
 # Hent miljøvariabler og lagre til fil
 nais-env --config path/to/nais.yaml --file .env
 
+# Bruk Handlebars-variabler for å prosessere nais.yaml
+nais-env --config path/to/nais.yaml --variables path/to/vars.yaml --file .env
+
+# Vis prosessert template etter variabelsubstitusjon
+nais-env --config path/to/nais.yaml --variables path/to/vars.yaml --print-template
+
 # Start et shell med alle miljøvariablene tilgjengelig
 nais-env --config path/to/nais.yaml --shell
 
@@ -113,6 +119,85 @@ nais-env --clear-files
 # Spesifiser Kubernetes-kontekst (nais-dev eller dev-fss)
 nais-env --config path/to/nais.yaml --context dev-fss
 ```
+
+### Handlebars Template Support
+
+`nais-env` støtter nå Handlebars-template-syntax for dynamisk konfigurasjon. Dette gjør det mulig å bruke en template-fil (`nais.yaml`) sammen med en variabel-fil (`vars.yaml`) for å generere forskjellige miljøkonfigurasjoner.
+
+#### Eksempel på Template (nais.yaml)
+
+```yaml
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ app.name }}
+  namespace: {{ app.namespace }}
+  labels:
+    team: {{ app.team }}
+spec:
+  image: {{ image }}
+  ingresses:
+    {{#each app.ingresses as |url|}}
+      - {{url}}
+    {{/each}}
+  env:
+    - name: ENV
+      value: {{ app.env }}
+    - name: API_URL
+      value: {{ api.url }}
+```
+
+#### Eksempel på Variabel-fil (vars-dev.yaml)
+
+```yaml
+app:
+  name: 'my-app-dev'
+  namespace: 'my-team-dev'
+  team: 'my-team'
+  ingresses:
+    - 'https://my-app.dev.nav.no'
+    - 'https://my-app.intern.dev.nav.no'
+  env: dev
+
+api:
+  url: 'https://api.dev.nav.no'
+
+image: 'ghcr.io/navikt/my-app:latest'
+```
+
+#### Støttede Handlebars-features
+
+- **Enkel variabelsubstitusjon**: `{{ variable.path }}`
+- **Løkker**: `{{#each array}} ... {{/each}}`
+- **Betingelser**: `{{#if condition}} ... {{/if}}`
+- **Og andre standard Handlebars-features**
+
+#### Bruk med variabler
+
+```bash
+# Prosesser template og hent miljøvariabler fra Kubernetes
+nais-env -c nais.yaml -v vars-dev.yaml --print
+
+# Lagre til fil
+nais-env -c nais.yaml -v vars-dev.yaml --file .env
+
+# Se den prosesserte templaten
+nais-env -c nais.yaml -v vars-dev.yaml --print-template
+```
+
+#### Template-prosessering uten Kubernetes
+
+Du kan bruke `--print-template` for å kun prosessere templaten med variabler, uten å koble til Kubernetes. Dette er nyttig for å:
+- Verifisere at variabler blir substituert riktig
+- Generere fullstendig NAIS-konfigurasjon for manuell inspeksjon
+- Bruke som input til andre verktøy
+
+```bash
+# Kun prosesser template, ingen Kubernetes-tilkobling nødvendig
+nais-env -c nais.yaml -v vars-dev.yaml --print-template > processed-nais.yaml
+```
+
+**Merk**: Hvis du ikke bruker `--print-template`, vil verktøyet forsøke å koble til Kubernetes for å hente hemmeligheter og miljøvariabler. Dette krever at du er autentisert mot klusteret.
 
 ### Tilpasning av zsh-prompt
 
